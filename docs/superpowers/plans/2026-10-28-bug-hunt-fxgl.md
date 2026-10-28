@@ -10,6 +10,15 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-28-bug-hunt-fxgl-design.md`. Read the § it cites for your task. **Rule authority:** `project-1/src/cacabugs/**` is authoritative for every gameplay rule and value (spec §5). When porting a class, open its project-1 original and translate it faithfully.
 
+## MVP re-scope (owner decision, 2026-10-28, after Task 2)
+
+The owner switched the project to an MVP. **Kept:** Tasks 1–3 (1–2 already done), Task 6 (slim), Task 7 (+ minimal HUD), Task 12. **Dropped:** Tasks 4, 5, 8, 9, 10, 11.
+- Task 8 (audio) was not named by the owner; the Producer dropped it as outside the MVP (ledger ruling).
+- **No persistence:** the high score is in-memory for the session, there are no settings, and controls are fixed (WASD + arrows, P/Esc pause, F11 fullscreen).
+- **Menus are FXGL's built-in defaults:** the main menu is FXGL's default, and the game menu (P/Esc) is FXGL's default pause menu.
+- Only `maze1` exists; `MazeLibrary.MAZE_FILES` stays `List.of("maze1.maze")`, so every level uses maze1.
+- The spec sections covering dropped features (§4.1 settings and rebinding, §4.2 custom screens, §4.4 audio, §5.5 items 1–2, §6) are deferred and out of scope for this branch.
+
 ## Global Constraints
 
 - All new code lives in `project-2/`. Never modify `project-1/`. Run every Maven command from `project-2/` with `./mvnw`.
@@ -230,6 +239,8 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 
 ### Task 4: Persistence — high scores and settings  — *UI/UX Developer*
 
+**DROPPED in the MVP re-scope — do not implement.**
+
 **Files:**
 - Create: `project-2/src/main/java/bughunt/model/persistence/{HighScoreEntry,HighScoreTable,Control,Settings,SaveFiles}.java`
 - Test: `.../model/persistence/{HighScoreTableTest,SaveFilesTest}.java`
@@ -274,6 +285,8 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 
 ### Task 5: Mazes 2 & 3, rotation, How-to-Play copy  — *Game Designer*
 
+**DROPPED in the MVP re-scope — do not implement.**
+
 **Files:**
 - Create: `project-2/src/main/resources/assets/levels/maze2.maze`, `maze3.maze`
 - Modify: `project-2/src/main/java/bughunt/model/maze/MazeLibrary.java` (`MAZE_FILES` → `List.of("maze1.maze", "maze2.maze", "maze3.maze")`)
@@ -301,10 +314,12 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 - [ ] **Step 4: Run `./mvnw -q test`.** Expected: all pass, including `MazeLibraryTest` with `mazeCount()==3`.
 - [ ] **Step 5: Commit** `feat(content): mazes 2 and 3 with rotation, how-to-play copy`.
 
-### Task 6: Neon view layer  — *Technical Artist*
+### Task 6: Neon view layer (slim, MVP)  — *Technical Artist*
+
+**MVP slim scope:** there is no `Effects` class: no particles, screen shake, floating text, bit pop, coffee steam or leg animation. Actors are static neon shapes. Everything else in this task stands.
 
 **Files:**
-- Create: `project-2/src/main/java/bughunt/view/{Theme,WallOutline,MazeRenderer,DebuggerView,BugView,PickupView,Effects,MatchView}.java`
+- Create: `project-2/src/main/java/bughunt/view/{Theme,WallOutline,MazeRenderer,DebuggerView,BugView,PickupView,MatchView}.java`
 - Test: `.../view/WallOutlineTest.java` (pure, no JavaFX toolkit)
 
 **Interfaces:**
@@ -312,7 +327,7 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 - Produces:
   - `final class Theme`: `TILE = 24`, `WIDTH = 1280`, `HEIGHT = 720`, `MAZE_X = 104`, `MAZE_Y = 84`, `HUD_X = 900`, `HUD_WIDTH = 340`; colour constants (background `#07130d`, trace green, door magenta, bit warm white, breakpoint red, debugger yellow, NullPointer red, RaceCondition pink, Deadlock cyan, Heisenbug orange, vulnerable blue, flash white); `Font title(double size)` and `Font body(double size)` (a monospace family with fallback).
   - `final class WallOutline { record Segment(double x1, double y1, double x2, double y2) {} static List<Segment> compute(Maze maze); }`. Segments are in tile units along every edge between a WALL cell and a non-WALL cell; collinear neighbours are merged into one segment; edges on the map boundary (no neighbour cell) are never outlined.
-  - `final class MatchView`: `MatchView(MatchSession session)`, `javafx.scene.layout.Pane root()` (sized to the maze in px, to be placed at `Theme.MAZE_X/Y`), `void update(double tpf)` (called every frame), `void dispose()` (unsubscribes nothing — the bus dies with the match — but clears effect nodes).
+  - `final class MatchView`: `MatchView(MatchSession session)`, `javafx.scene.layout.Pane root()` (sized to the maze in px, to be placed at `Theme.MAZE_X/Y`), `void update(double tpf)` (called every frame).
   - The view must not mutate the model.
 
   Visual behaviour (spec §4.3; timings spec §4.2):
@@ -323,8 +338,8 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
   - LIFE_LOST: everything frozen until `FROZEN`; then the bugs are hidden and the cursor spins (a quarter turn every `Ticks.of(0.08)`) until `SPINNING`, then shows a glitch "X" and the "SEGFAULT" text.
   - LEVEL_CLEARED: the traces turn white whenever `mazeFlashOn()`, and "BUILD PASSED" is shown.
   - GAME_OVER shows "GAME OVER".
-  - `Effects` subscribes to the match's `EventBus`: on `BUG_CAPTURED`, a particle burst plus floating `value` text (0.75 s); on `COFFEE_EATEN`, floating value (1.5 s); on `BIT_EATEN`, a small pop; on `DEBUGGER_CAUGHT`, screen shake (~0.4 s, amplitude ≤ 6 px) applied to `root()`.
-  - Breakpoints pulse every 0.25 s; coffee steam animates; bug legs animate while moving.
+  - Breakpoints pulse every 0.25 s (opacity or scale).
+  - Shapes: the debugger is a yellow arrow cursor pointing along `direction()`; bugs are a simple beetle silhouette (body + head + 6 short legs) in their colour; EYES is two white eyes; the bit is a small dot; the breakpoint is a larger red pad; coffee is a small brown cup.
 
 - [ ] **Step 1: Write `WallOutlineTest`** (build mazes with the `Maze` constructor from Task 2).
   - A 3×3 grid with only the centre WALL yields exactly the segments (1,1)-(2,1), (1,2)-(2,2), (1,1)-(1,2), (2,1)-(2,2), in any order and either endpoint order.
@@ -333,31 +348,49 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 - [ ] **Step 2: Run `./mvnw -q test -Dtest=WallOutlineTest`.** Expected: FAIL.
 - [ ] **Step 3: Implement** `Theme` and `WallOutline` until the test passes, then implement the remaining view classes. Glow uses `DropShadow`/`Bloom` on the trace group (not per node) so the frame rate holds.
 - [ ] **Step 4: Run `./mvnw -q test` and `./mvnw -q compile`.** Expected: pass. Visual verification happens in Task 7 once the view is wired into the app.
-- [ ] **Step 5: Commit** `feat(view): neon maze, actors and effects`.
+- [ ] **Step 5: Commit** `feat(view): neon maze and actors`.
 
-### Task 7: Game application wiring, input, QA screenshot harness  — *Gameplay Programmer*
+### Task 7: Game application wiring, input, minimal HUD, QA screenshot harness  — *Gameplay Programmer*
+
+**MVP scope:** no persistence, settings or rebinding (Task 4 was dropped). Menus are FXGL's built-in defaults.
 
 **Files:**
-- Create: `project-2/src/main/java/bughunt/BugHuntApp.java`, `project-2/src/main/java/bughunt/GameControls.java`, `project-2/src/main/java/bughunt/ui/ErrorDialog.java`, `project-2/src/main/java/bughunt/qa/QaShots.java`
+- Create: `project-2/src/main/java/bughunt/BugHuntApp.java`, `project-2/src/main/java/bughunt/GameControls.java`, `project-2/src/main/java/bughunt/ui/ErrorDialog.java`, `project-2/src/main/java/bughunt/ui/Hud.java`, `project-2/src/main/java/bughunt/qa/QaShots.java`
 
 **Interfaces:**
-- Consumes: `MatchSession`, `FixedStepClock`, `MazeLibrary.fromClasspath()`, `SaveFiles`, `Settings`, `Control`, `HighScoreTable`, `MatchView`, `Theme`.
+- Consumes: `MatchSession`, `FixedStepClock`, `MazeLibrary.fromClasspath()`, `ModeController`/`ScoreBoard`/`Debugger`/`Match` queries, `MatchView`, `Theme`.
 - Produces:
   - `public class BugHuntApp extends GameApplication`, with `main(String[] args)` calling `launch(args)`.
-  - `initSettings`: 1280×720, title "Bug Hunt", version "1.0", `setManualResizeEnabled(true)`, `setPreserveResizeRatio(true)`, `setFullScreenAllowed(true)`. Main and game menus use FXGL defaults for now; Task 10 replaces them.
-  - `initGame` builds a **new** `MatchSession` (best score = `highScores().best()`) and a new `MatchView` placed at `Theme.MAZE_X/Y`, with the `#07130d` background. An `InvalidMazeException` → `ErrorDialog.show(...)` and return to the main menu.
-  - `onUpdate(tpf)` runs `clock.advance(tpf)` ticks, then `view.update(tpf)`. Any `RuntimeException` → log + `ErrorDialog.show` + main menu.
-  - Accessors used by later tasks: `MatchSession session()`, `Settings settings()`, `SaveFiles saves()`, `HighScoreTable highScores()`, `void applySettings()` (volumes → FXGL global music/sound volume, fullscreen → stage, keys → `GameControls.applyBindings`), and `void addGameOverListener(Runnable r)`, which Task 10 uses: it is invoked once when `session.isOver()` first becomes true.
+  - `initSettings`:
+    - 1280×720, title "Bug Hunt", version "1.0"
+    - `setMainMenuEnabled(true)` and `setGameMenuEnabled(true)`, using FXGL's default menus
+    - `setManualResizeEnabled(true)`, `setPreserveResizeRatio(true)`, `setFullScreenAllowed(true)`
+  - `initGame`:
+    - Builds a **new** `MatchSession(MazeLibrary.fromClasspath(), sessionBest)`. `sessionBest` is an instance field holding the best score seen since the app launched (in memory only), updated when a match ends.
+    - Builds a new `MatchView` placed at `Theme.MAZE_X/Y` and a new `Hud`, with the `#07130d` background.
+    - An `InvalidMazeException` → `ErrorDialog.show(...)` and return to the main menu.
+  - `onUpdate(tpf)` runs `clock.advance(tpf)` ticks, then `view.update(tpf)` and `hud.update()`. Any `RuntimeException` → log + `ErrorDialog.show` + main menu.
+  - **Game over:** when `session.isOver()` first becomes true, record `sessionBest = max(sessionBest, score)`, wait 3 s (FXGL timer) so the "GAME OVER" view shows, then `getGameController().gotoMainMenu()`.
   - Nothing static except constants (Review Focus 5).
   - `final class GameControls`:
-    - `void install(Input input, Supplier<MatchSession> session)`: rebindable actions named exactly `"Up"`, `"Down"`, `"Left"`, `"Right"`, `"Pause"` (defaults from `Settings`), plus fixed arrow-key actions `"Up (arrow)"`, `"Down (arrow)"`, `"Left (arrow)"`, `"Right (arrow)"`, and `"Fullscreen"` on F11.
-    - `void applyBindings(Input input, Settings s)`: rebinds the five rebindable actions; an unknown KeyCode name falls back to the default.
-    - `"Pause"` → `getGameController().gotoGameMenu()`.
-  - `final class ErrorDialog { static void show(String title, String message, Runnable onClose); }`, using FXGL's dialog service. Task 10 may restyle it but keeps the signature.
-  - `final class QaShots`: enabled when a program arg `--qa-shots=<dir>` is present (read in `BugHuntApp` from `getParameters()`/the launch args). It drives a scripted run: start a new game, save `<dir>/01-ready.png` at 1 s and `<dir>/02-gameplay.png` at 5 s, open the game menu and save `03-pause.png`, then `exit(0)`. Shots are taken via `Scene.snapshot` + `javax.imageio` (through `javafx.embed.swing.SwingFXUtils`), or FXGL's screenshot facility if simpler. `QaShots` exposes `void addStep(double atSeconds, String name, Runnable action)` so Tasks 10 and 11 can extend the script.
+    - `void install(Input input, Supplier<MatchSession> session)` with fixed bindings: W/Up arrow → UP, S/Down → DOWN, A/Left → LEFT, D/Right → RIGHT (FXGL needs one action per key, so name them e.g. `"Up (W)"`, `"Up (arrow)"`); P → `gotoGameMenu()` (Esc already opens FXGL's game menu); F11 → toggle fullscreen.
+    - Direction actions call `session.get().requestDirection(...)` on action begin.
+  - `final class Hud`: `Hud(Supplier<MatchSession> session)`, `Region root()` placed at `Theme.HUD_X` (width `Theme.HUD_WIDTH`), `void update()` called every frame. It shows, as neon labels using `Theme` fonts and colours:
+    - SCORE
+    - HIGH SCORE (`match.score().highScore()`)
+    - LEVEL
+    - lives (number or small cursor icons)
+    - wave (`BREAKPOINT` while `modes().isBreakpointActive()`, else `modes().waveName()`)
+    - bits remaining (`match.pickupsRemaining()`)
+    - a one-line controls hint: "WASD/Arrows move · P pause · F11 fullscreen"
+  - `final class ErrorDialog { static void show(String title, String message, Runnable onClose); }`, using FXGL's dialog service.
+  - `final class QaShots`:
+    - Enabled when a program arg `--qa-shots=<dir>` is present (read in `BugHuntApp` from the launch args).
+    - It drives a scripted run: from the main menu save `<dir>/00-main-menu.png`; start a new game; save `<dir>/01-ready.png` at 1 s and `<dir>/02-gameplay.png` at 5 s; open the game menu and save `03-pause.png`; resume; force a game over (call `session().match().debugger().loseLife()` until one life is left, then `captureDebugger()`); save `04-game-over.png` about 2.5 s later; then `exit(0)`.
+    - Shots are taken via `Scene.snapshot` + `javax.imageio` (through `javafx.embed.swing.SwingFXUtils`), or FXGL's screenshot facility if simpler.
   - Run command (documented in the README by Task 12): `xvfb-run -a -s "-screen 0 1280x720x24" ./mvnw -q javafx:run -Dqa.args=--qa-shots=target/qa-shots`.
 
-- [ ] **Step 1: Implement** the classes above. No unit tests: the logic under test lives in Tasks 3–4. This task is verified by running the game.
+- [ ] **Step 1: Implement** the classes above. No unit tests: the logic under test lives in Task 3. This task is verified by running the game.
 - [ ] **Step 2: Run `./mvnw -q test`.** Expected: all pass (no regressions).
 - [ ] **Step 3: Run the harness.**
 
@@ -365,16 +398,20 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
   cd project-2 && rm -rf target/qa-shots && xvfb-run -a -s "-screen 0 1280x720x24" ./mvnw -q javafx:run -Dqa.args=--qa-shots=target/qa-shots; echo "exit=$?"; ls target/qa-shots
   ```
 
-  Expected: `exit=0`; `01-ready.png`, `02-gameplay.png` and `03-pause.png` exist; no `Exception` in the output. Open the PNGs (Read tool) and confirm:
+  Expected: `exit=0`; `00-main-menu.png` through `04-game-over.png` exist; no `Exception` in the output. Open the PNGs (Read tool) and confirm:
   - the neon maze is drawn at the right position with the debugger and bugs visible;
+  - the HUD is fully visible on the right with no clipping;
   - "READY!" appears in shot 1;
-  - the actors have moved in shot 2.
+  - the actors have moved in shot 2;
+  - "GAME OVER" appears in shot 4.
 
   If xvfb rendering fails, add `-Dprism.order=sw` via the plugin's `<options>`.
 - [ ] **Step 4: Fix any visual defects you can attribute to wiring.** List view-layer defects in your report; do not rewrite the view.
-- [ ] **Step 5: Commit** `feat: wire FXGL application, controls and QA screenshot harness`.
+- [ ] **Step 5: Commit** `feat: wire FXGL application, controls, HUD and QA screenshot harness`.
 
 ### Task 8: Audio — SoundForge, assets, AudioDirector  — *Audio Engineer*
+
+**DROPPED in the MVP re-scope — do not implement.**
 
 **Files:**
 - Create: `project-2/tools/SoundForge.java`, `project-2/src/main/resources/assets/sounds/*.wav`, `project-2/src/main/resources/assets/music/*.wav`
@@ -401,6 +438,8 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 
 ### Task 9: UI screens — settings, high scores, how-to-play, name entry  — *UI/UX Developer*
 
+**DROPPED in the MVP re-scope — do not implement.**
+
 **Files:**
 - Create: `project-2/src/main/java/bughunt/ui/{UiKit,SettingsScreen,HighScoresScreen,HowToPlayScreen,NameEntryDialog}.java`
 
@@ -426,6 +465,8 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 - [ ] **Step 4: Commit** `feat(ui): settings, high scores, how-to-play and name entry screens`.
 
 ### Task 10: UI flow — splash, main menu, pause, HUD, game over  — *UI/UX Developer*
+
+**DROPPED in the MVP re-scope — do not implement.**
 
 **Files:**
 - Create: `project-2/src/main/java/bughunt/ui/{BugHuntSceneFactory,SplashIntro,MainMenu,PauseMenu,Hud,GameOverFlow}.java`
@@ -454,6 +495,8 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 
 ### Task 11: QA smoke script and playtest report  — *QA Engineer*
 
+**DROPPED in the MVP re-scope — do not implement.**
+
 **Files:**
 - Create: `project-2/qa/smoke.sh`, `project-2/qa/PLAYTEST.md`
 - Modify: `project-2/src/main/java/bughunt/qa/QaShots.java` (only if a check below needs another shot)
@@ -474,16 +517,17 @@ Port the rest of `project-1`'s model faithfully, translated to English per spec 
 - Create: `project-2/README.md`
 
 **Interfaces:**
-- Consumes: the final code (read it), spec §1/§4/§5, `project-1/README.md` (structure to mirror, translated to English).
+- Consumes: the final code (read it — describe only what exists in this MVP), spec §1/§4/§5, `project-1/README.md` (structure to mirror, translated to English).
 - Produces: `project-2/README.md` with these sections:
   - **Bug Hunt** pitch;
-  - **How to run** (JDK 21+, `./mvnw javafx:run`, `./mvnw test`, the QA harness command, `qa/smoke.sh`);
+  - **How to run** (JDK 21+, `./mvnw javafx:run`, `./mvnw test`, the QA harness command);
   - **Controls**;
   - **Rules** (including the bug table);
   - **Project structure** (the package tree);
   - **Where each OO concept lives**: a table covering Abstraction, Inheritance, Polymorphism, Encapsulation, Interfaces, Composition, State (bug modes and match phases), Template Method, Observer, Factory, sealed hierarchies + pattern matching, enums, exceptions, collections, each naming real classes in project-2;
-  - **What changed from the terminal version**;
-  - **Customising** (the maze legend, `.maze` files, rotation rule).
+  - **What changed from the terminal version** (windowed FXGL, neon visuals, smooth movement, HUD, FXGL menus);
+  - **MVP scope / roadmap**: one short list of what this MVP leaves out (persistent top-5 scores, settings and key rebinding, audio, extra mazes, custom menus and screens, particles and effects), pointing to the spec;
+  - **Customising** (the maze legend and the `.maze` file; `MazeLibrary.MAZE_FILES` lists the mazes and their rotation rule).
 
   Every class name cited must exist (check with `grep`).
 - [ ] **Step 1: Write the README.**
