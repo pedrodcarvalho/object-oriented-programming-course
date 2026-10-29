@@ -101,6 +101,6 @@ This MVP leaves out (see the spec, `docs/superpowers/specs/2026-10-28-bug-hunt-f
 
 ## Customising
 
-- **Maze:** edit `src/main/resources/assets/levels/maze1.maze`. Legend (same as project-1's `labirinto.txt`): `#` wall, `.` bit, `o` breakpoint, space corridor, `T` tunnel, `-` backlog door, `H` backlog, `P` Debugger, `C` coffee, `1` to `4` bugs. Every line must have the same length. An invalid maze raises `InvalidMazeException`, shown in an error dialog.
+- **Maze:** edit `src/main/resources/assets/levels/maze1.maze`. Legend (same as project-1's `labirinto.txt`): `#` wall, `.` bit, `o` breakpoint, space corridor, `T` tunnel, `-` backlog door, `H` backlog, `P` Debugger, `C` coffee, `1` to `4` bugs. Every line must have the same length. An invalid starting maze, or a missing maze file, is reported in an error dialog at startup. A malformed later maze ends the match when its level loads.
 - **More mazes:** add the file next to `maze1.maze` and list it in `MazeLibrary.MAZE_FILES`. Level *n* uses index `((n-1)/2) % count`, so each maze lasts two levels and the list rotates. With one maze, every level uses `maze1`.
 - **Colours:** the palette lives in `view/Theme.java`.
