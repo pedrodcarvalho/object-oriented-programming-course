@@ -4,7 +4,6 @@ import bughunt.model.actors.Actor;
 import bughunt.model.actors.Bug;
 import bughunt.model.core.Direction;
 import bughunt.model.core.Match;
-import bughunt.model.core.Position;
 import bughunt.model.core.Ticks;
 import bughunt.model.flow.GamePhase;
 import bughunt.model.flow.LevelCleared;
@@ -32,7 +31,8 @@ import javafx.scene.text.Text;
  * ("READY!", "SEGFAULT", ...). It only reads the model, never changes it.
  *
  * <p>Static geometry is rebuilt only when the maze instance changes (a new level); each
- * frame merely moves and re-styles the actor and pickup nodes.
+ * frame merely moves and re-styles the actor and pickup nodes. Actors are placed by an
+ * {@link ActorTrail} each, which trails the model by up to one tile so they never cut corners.
  */
 public final class MatchView {
     /** The death spin turns the cursor a quarter turn this often. */
@@ -50,6 +50,8 @@ public final class MatchView {
     private final Text banner = new Text();
     private final Map<Pickup, PickupView> pickupViews = new IdentityHashMap<>();
     private final Map<Bug, BugView> bugViews = new IdentityHashMap<>();
+    private final ActorTrail debuggerTrail = new ActorTrail();
+    private final Map<Bug, ActorTrail> bugTrails = new IdentityHashMap<>();
 
     private Maze maze;
     private MazeRenderer mazeRenderer;
@@ -130,44 +132,47 @@ public final class MatchView {
      * crashes into a glitched "X". After game over it is gone.
      */
     private void drawDebugger(Match match, GamePhase phase) {
-        Actor debugger = match.debugger();
-        Point2D centre = centre(debugger);
+        Point2D centre = follow(match.debugger(), debuggerTrail, phase);
         double x = centre.getX();
         double y = centre.getY();
+        Direction facing = debuggerTrail.facing();
         int elapsed = phase.elapsedTicks();
         switch (phase.kind()) {
             case GAME_OVER -> debuggerView.hide();
             case LIFE_LOST -> {
                 if (elapsed < LifeLost.FROZEN) {
-                    debuggerView.showCursor(x, y, debugger.direction(), 0);
+                    debuggerView.showCursor(x, y, facing, 0);
                 } else if (elapsed < LifeLost.SPINNING) {
-                    debuggerView.showCursor(x, y, debugger.direction(), (elapsed - LifeLost.FROZEN) / SPIN_STEP);
+                    debuggerView.showCursor(x, y, facing, (elapsed - LifeLost.FROZEN) / SPIN_STEP);
                 } else {
                     debuggerView.showCrash(x, y);
                 }
             }
-            default -> debuggerView.showCursor(x, y, debugger.direction(), 0);
+            default -> debuggerView.showCursor(x, y, facing, 0);
         }
     }
 
-    /** Keeps one view per bug of the current level and draws each the way its mode says. */
+    /** Keeps one view and trail per bug of the current level and draws each the way its mode says. */
     private void drawBugs(Match match, GamePhase phase) {
         List<Bug> bugs = match.bugs();
         if (bugViews.size() != bugs.size() || !bugs.stream().allMatch(bugViews::containsKey)) {
             bugViews.clear();
+            bugTrails.clear();
             bugLayer.getChildren().clear();
             for (Bug bug : bugs) {
                 BugView view = new BugView(bug);
                 bugViews.put(bug, view);
+                bugTrails.put(bug, new ActorTrail());
                 bugLayer.getChildren().add(view.node());
             }
         }
         boolean visible = bugsVisible(phase);
         for (Bug bug : bugs) {
+            ActorTrail trail = bugTrails.get(bug);
+            Point2D centre = follow(bug, trail, phase);
             BugView view = bugViews.get(bug);
             if (visible) {
-                Point2D centre = centre(bug);
-                view.show(centre.getX(), centre.getY(), bug.direction(), bug.look(match));
+                view.show(centre.getX(), centre.getY(), trail.facing(), bug.look(match));
             } else {
                 view.hide();
             }
@@ -225,17 +230,13 @@ public final class MatchView {
     }
 
     /**
-     * Centre of the actor in px: its tile plus {@code direction × progress}. When the next
-     * tile wraps through the tunnel (more than one tile away) it is not interpolated.
+     * Feeds this frame's actor state to its trail and returns the centre to draw at, in px.
+     * During READY every actor stands on its start tile, so the trail snaps there instead
+     * of sliding in from where the last round ended.
      */
-    private Point2D centre(Actor actor) {
-        Position here = actor.position();
-        Direction direction = actor.direction();
-        Position next = maze.neighbor(here, direction);
-        boolean wraps = Math.abs(next.x() - here.x()) + Math.abs(next.y() - here.y()) > 1;
-        double progress = wraps ? 0 : actor.progress();
-        return new Point2D(
-                (here.x() + direction.dx() * progress + 0.5) * Theme.TILE,
-                (here.y() + direction.dy() * progress + 0.5) * Theme.TILE);
+    private static Point2D follow(Actor actor, ActorTrail trail, GamePhase phase) {
+        boolean snap = phase.kind() == PhaseKind.READY;
+        trail.follow(actor.position(), actor.direction(), actor.progress(), snap);
+        return new Point2D((trail.x() + 0.5) * Theme.TILE, (trail.y() + 0.5) * Theme.TILE);
     }
 }
