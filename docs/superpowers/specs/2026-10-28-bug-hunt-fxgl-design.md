@@ -66,7 +66,7 @@ project-2/
 The model keeps the terminal game's 60 ticks/s. `BugHuntApp.onUpdate(tpf)` adds `tpf` to an accumulator and calls `session.tick()` once for each full 1/60 s, at most 5 ticks per frame to avoid a spiral of death. While a menu is open (FXGL pauses `onUpdate`), the model does not advance.
 
 ### 3.3 Interpolation
-`Actor` exposes `position()`, `direction()` and `progress()` (0.0–1.0, the fraction of the way to the next tile, i.e. `Personagem.progresso`). The view draws each actor at `position + direction × progress`, so movement is smooth. A tunnel wrap snaps without interpolation.
+`Actor` exposes `position()`, `direction()` and `progress()` (0.0–1.0, the fraction of the way to the next tile, i.e. `Personagem.progresso`). *(Amended by ruling R12 during implementation.)* The view uses **trailing** interpolation. It remembers each actor's previous tile A and current tile B and draws it at `A + (B − A) × t`, where `t = max(t, progress())` only grows within a segment. Both tiles are always passable, so actors never cut into walls. The drawing trails the logic by at most one tile. A tunnel wrap or a respawn (A and B not adjacent) snaps without interpolation. The original `position + direction × progress` formula drew actors inside walls, because `direction()` is the direction the actor arrived from.
 
 ### 3.4 Appearance is model state, not sprites
 `BugMode` drops `aparencia(Sprite)` and gains `Look look(Bug, Match)`, where `Look` is `NORMAL | VULNERABLE | FLASHING | EYES`. `Debugger` exposes its `direction()`. The view maps these to visuals.
