@@ -1,1 +1,5 @@
 target/
+
+# Written by FXGL at runtime (logs and engine system files)
+logs/
+system/
