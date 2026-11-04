@@ -1,2 +1,84 @@
-# Compiled Java files
+# ---------------------------------------------------------------
+# Java build output
+# ---------------------------------------------------------------
 *.class
+*.jar
+*.war
+*.ear
+hs_err_pid*.log
+replay_pid*.log
+
+# Plain javac / IDE output dirs
+**/out/
+**/bin/
+**/build/
+
+# Maven
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# ---------------------------------------------------------------
+# Runtime files written by the games
+# ---------------------------------------------------------------
+# project-1 high-score file (keep the maze resources under src/)
+project-1/recorde.txt
+
+# FXGL (project-2) runtime logs and engine system files
+**/logs/
+*.log
+project-2/system/
+
+# ---------------------------------------------------------------
+# Archives and generated deliverables
+# ---------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Report build output (regenerate with submission/source/build.sh)
+submission/report.pdf
+submission/source/report.html
+
+# ---------------------------------------------------------------
+# Editors and IDEs
+# ---------------------------------------------------------------
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.settings/
+.project
+.classpath
+.factorypath
+nbproject/
+nbbuild/
+nbdist/
+.nb-gradle/
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------
+# Tooling / agent state
+# ---------------------------------------------------------------
+.claude/worktrees/
+.claude/settings.local.json
+.github/modernize/
+
+# ---------------------------------------------------------------
+# OS junk
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
