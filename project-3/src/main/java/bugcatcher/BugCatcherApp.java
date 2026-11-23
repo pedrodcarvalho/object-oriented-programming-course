@@ -15,6 +15,8 @@ import bugcatcher.player.HighScores;
 import bugcatcher.player.Player;
 import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
+import com.almasb.fxgl.app.scene.FXGLMenu;
+import com.almasb.fxgl.app.scene.SceneFactory;
 import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.physics.CollisionHandler;
 import com.almasb.fxgl.time.TimerAction;
@@ -27,26 +29,19 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 
-/**
- * Bug Catcher: move the basket, catch the coffee, dodge the bugs.
- *
- * FXGL calls the init... methods below in this order when a game starts:
- * initSettings (once), initInput (once), initGame, initPhysics, initUI.
- * After that it calls onUpdate about 60 times per second.
- */
 public class BugCatcherApp extends GameApplication {
-
     private static final int WIDTH = 600;
     private static final int HEIGHT = 800;
 
     private static final double BASKET_WIDTH = 110;
     private static final double BASKET_HEIGHT = 22;
-    private static final double BASKET_STEP = 8; // pixels moved per frame while a key is held
+    private static final double BASKET_STEP = 8;
 
     private static final Duration SPAWN_EVERY = Duration.seconds(0.7);
     private static final Color BACKGROUND = Color.web("#1e1e2e");
 
-    /** Static because main() sets it before FXGL creates the game object. */
+    public static final Path SCORES_FILE = Path.of("highscores.txt");
+
     private static String playerName = "Player";
 
     private Player player;
@@ -56,12 +51,12 @@ public class BugCatcherApp extends GameApplication {
     private TimerAction spawner;
     private boolean gameOver;
 
-    /** Optional command-line argument: the player's name. */
     public static void main(String[] args) {
-        if (args.length > 0 && !args[0].isBlank()) {
-            playerName = args[0];
-        }
         launch(args);
+    }
+
+    public static void setPlayerName(String name) {
+        playerName = name;
     }
 
     @Override
@@ -69,12 +64,19 @@ public class BugCatcherApp extends GameApplication {
         settings.setWidth(WIDTH);
         settings.setHeight(HEIGHT);
         settings.setTitle("Bug Catcher");
-        settings.setVersion("1.0");
+        settings.setVersion("1.1");
+
+        settings.setMainMenuEnabled(true);
+        settings.setSceneFactory(new SceneFactory() {
+            @Override
+            public FXGLMenu newMainMenu() {
+                return new NameMenu();
+            }
+        });
     }
 
     @Override
     protected void initInput() {
-        // onKey runs the code on every frame while the key is held down.
         onKey(KeyCode.LEFT, () -> moveBasket(-BASKET_STEP));
         onKey(KeyCode.RIGHT, () -> moveBasket(BASKET_STEP));
         onKey(KeyCode.A, () -> moveBasket(-BASKET_STEP));
@@ -84,7 +86,7 @@ public class BugCatcherApp extends GameApplication {
     @Override
     protected void initGame() {
         player = new Player(playerName);
-        highScores = new HighScores(Path.of("highscores.txt"));
+        highScores = new HighScores(SCORES_FILE);
         gameOver = false;
 
         getGameScene().setBackgroundColor(BACKGROUND);
@@ -96,13 +98,11 @@ public class BugCatcherApp extends GameApplication {
                 .collidable()
                 .buildAndAttach();
 
-        // A new random item every 0.7 seconds.
         spawner = getGameTimer().runAtInterval(this::spawnItem, SPAWN_EVERY);
     }
 
     @Override
     protected void initPhysics() {
-        // When the basket touches an item, this runs once.
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.BASKET, EntityType.ITEM) {
             @Override
             protected void onCollisionBegin(Entity basket, Entity itemEntity) {
@@ -111,7 +111,7 @@ public class BugCatcherApp extends GameApplication {
                 }
                 FallingItem item = itemEntity.getObject("item");
                 itemEntity.removeFromWorld();
-                player.caught(item); // Coffee, Bug or Heart: each one does its own thing
+                player.caught(item);
 
                 if (!player.isAlive()) {
                     endGame();
@@ -143,13 +143,12 @@ public class BugCatcherApp extends GameApplication {
         if (gameOver) {
             return;
         }
-        // tpf = "time per frame" in seconds, so speed * tpf = pixels to move this frame.
         for (Entity entity : getGameWorld().getEntitiesByType(EntityType.ITEM)) {
             FallingItem item = entity.getObject("item");
             entity.translateY(item.getSpeed() * tpf);
 
             if (entity.getY() > HEIGHT) {
-                entity.removeFromWorld(); // missed it: it fell off the screen
+                entity.removeFromWorld();
             }
         }
         updateHud();
@@ -164,7 +163,7 @@ public class BugCatcherApp extends GameApplication {
                 .at(x, -FallingItem.SIZE)
                 .viewWithBBox(item.createShape())
                 .view(item.createLabel())
-                .with("item", item) // keep our Java object inside the FXGL entity
+                .with("item", item)
                 .collidable()
                 .buildAndAttach();
     }
@@ -174,7 +173,7 @@ public class BugCatcherApp extends GameApplication {
             return;
         }
         double x = basket.getX() + dx;
-        x = Math.max(0, Math.min(WIDTH - BASKET_WIDTH, x)); // keep it inside the window
+        x = Math.max(0, Math.min(WIDTH - BASKET_WIDTH, x));
         basket.setX(x);
     }
 
@@ -186,18 +185,18 @@ public class BugCatcherApp extends GameApplication {
 
     private void endGame() {
         gameOver = true;
-        spawner.expire(); // stop creating items
+        spawner.expire();
         updateHud();
 
         int score = player.getScore();
         boolean newRecord = score > highScores.getBest();
-        highScores.add(score);
+        highScores.add(player.getName(), score);
         highScores.save();
 
         String title = newRecord ? "NEW RECORD!" : "GAME OVER";
         String message = String.format("%s%n%n%s, you scored %d points.%nYou caught %s.%n%nTop %d:%n%s",
                 title, player.getName(), score, player.getSummary(), HighScores.SIZE, highScores);
 
-        getDialogService().showMessageBox(message, () -> getGameController().startNewGame());
+        getDialogService().showMessageBox(message, () -> getGameController().gotoMainMenu());
     }
 }

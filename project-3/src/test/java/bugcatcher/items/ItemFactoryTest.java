@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class ItemFactoryTest {
-
     @Test
     void rollDecidesTheKindOfItem() {
         assertInstanceOf(Coffee.class, ItemFactory.randomItem(1, 0));
@@ -35,7 +34,7 @@ class ItemFactoryTest {
     @Test
     void goldenCoffeeIsWorthMoreAndFallsFaster() {
         Coffee normal = new Coffee(100);
-        Coffee golden = new GoldenCoffee(100); // a GoldenCoffee "is a" Coffee
+        Coffee golden = new GoldenCoffee(100);
         assertEquals(10, normal.getPoints());
         assertEquals(50, golden.getPoints());
         assertEquals(150, golden.getSpeed());

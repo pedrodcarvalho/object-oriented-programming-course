@@ -12,7 +12,6 @@ import bugcatcher.items.Heart;
 import org.junit.jupiter.api.Test;
 
 class PlayerTest {
-
     @Test
     void startsWithThreeLivesAndNoPoints() {
         Player player = new Player();

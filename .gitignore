@@ -28,10 +28,14 @@ release.properties
 # project-1 high-score file (keep the maze resources under src/)
 project-1/recorde.txt
 
-# FXGL (project-2) runtime logs and engine system files
+# project-3 high-score file
+project-3/highscores.txt
+
+# FXGL (project-2 and project-3) runtime logs and engine system files
 **/logs/
 *.log
 project-2/system/
+project-3/system/
 
 # ---------------------------------------------------------------
 # Archives and generated deliverables
@@ -43,9 +47,9 @@ project-2/system/
 *.7z
 *.rar
 
-# Report build output (regenerate with submission/source/build.sh)
+# Report build output and its sources
 submission/report.pdf
-submission/source/report.html
+submission/source/
 
 # ---------------------------------------------------------------
 # Editors and IDEs
